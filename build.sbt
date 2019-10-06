@@ -30,8 +30,6 @@ libraryDependencies ++= {
 }
 
 enablePlugins(BuildInfoPlugin)
-enablePlugins(JavaAppPackaging)
-dockerExposedPorts += 8080
 
 mainClass in assembly := Some("com.wanari.renervator.Main")
 assemblyJarName in assembly := "wol.jar"
