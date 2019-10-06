@@ -30,6 +30,8 @@ libraryDependencies ++= {
 }
 
 enablePlugins(BuildInfoPlugin)
+enablePlugins(JavaAppPackaging)
+dockerExposedPorts += 8080
 
 buildInfoKeys := Seq[BuildInfoKey](
   name,
