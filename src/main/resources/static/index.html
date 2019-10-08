@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WoL</title>
+  <style>
+    .status {
+      margin-left: 5px;
+      margin-bottom: -2px;
+      border: 1px solid;
+      border-radius: 5px;
+      width: 10px;
+      height: 10px;
+      display: inline-block;
+    }
+
+    .on {
+      background-color: lightgreen;
+      border-color: green;
+    }
+
+    .off {
+      background-color: lightpink;
+      border-color: red;
+    }
+
+    table {
+      border-collapse: collapse;
+      border: 1px solid darkgrey;
+      background-color: whitesmoke;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    td {
+      padding: 5px;
+      vertical-align: center;
+      height: 20px;
+    }
+
+    body {
+      text-align: center;
+      width: 100%;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <script>
+    function send(id) {
+      $.ajax({
+        type: 'POST',
+        url: '/api/wakeItUp',
+        data: JSON.stringify({id: id}),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        success: function (data) {
+          console.log('SEND OK - ' + id);
+        }
+      }).fail(function (data) {
+        console.error('SEND ERROR - ' + id, data);
+      });
+    }
+
+    function createList(data) {
+      var list = $('#machine_list');
+      list.empty();
+      $.each(data, function (i) {
+        $('<tr>' +
+          '<td><div class="status ' + (data[i].isOnline ? 'on' : 'off') + '"></div></td>' +
+          '<td>' + data[i].name + '</td>' +
+          '<td><button onclick="send(\'' + data[i].id + '\')">WOL</button></td>' +
+          '</tr>'
+        ).appendTo(list);
+      });
+    }
+
+    function load() {
+      $.ajax({
+        type: 'GET',
+        url: '/api/wol',
+        success: function (data) {
+          console.log('LOAD OK');
+          createList(data.hosts);
+        }
+      }).fail(function (data) {
+        console.error('LOAD ERROR', data);
+      });
+    }
+
+    $(window).on('load', function () {
+      setInterval(load, 2000);
+    });
+
+  </script>
+</head>
+<body>
+<table id="machine_list"></table>
+</body>
+</html>

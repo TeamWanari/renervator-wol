@@ -2,11 +2,12 @@ package com.wanari.renervator
 
 import cats.effect.{ContextShift, ExitCode, IO, IOApp}
 import cats.implicits._
-import com.wanari.renervator.api.{HealthCheckApi, WakerApi}
+import com.wanari.renervator.api.{FrontendApi, HealthCheckApi, WakerApi}
 import com.wanari.renervator.service.{NetworkingService, PingerService}
-import org.http4s.implicits._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.server.staticcontent._
+import org.http4s.syntax.kleisli._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -22,9 +23,10 @@ object Main extends IOApp {
   val healthCheckApi = new HealthCheckApi()
   val wakeupApi = new WakerApi(database, networkingService)
 
-  val apis = healthCheckApi.route <+> wakeupApi.route
+  val backendApi = healthCheckApi.route <+> wakeupApi.route
+  val frontendApi = new FrontendApi().route
 
-  val httpApp = Router("/" -> apis).orNotFound
+  val httpApp = Router("/api" -> backendApi, "/" -> frontendApi).orNotFound
 
   def run(args: List[String]): IO[ExitCode] = {
     for {

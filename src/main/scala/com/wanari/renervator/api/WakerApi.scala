@@ -25,7 +25,7 @@ class WakerApi(database: Database, networkingService: NetworkingService) {
         sent.fold(_ => NotFound(), _ => Ok(Json.obj()))
       }).fold(NotFound())(identity).flatMap(identity)
 
-    case GET -> Root =>
+    case GET -> Root / "wol" =>
       database.all.flatMap(l => Ok(HostListDTO(l)))
   }
 }
