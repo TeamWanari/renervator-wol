@@ -9,11 +9,15 @@ services:
 
 script:
   - sbt test
-  - docker build -t $DOCKER_IMAGE .
+  - docker build -t renorvator-wol .
+
+before_deploy:
+  - docker tag renorvator-wol $DOCKER_IMAGE
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
 deploy:
   provider: script
-  script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin && docker push $DOCKER_IMAGE
+  script: docker push $DOCKER_IMAGE
   skip_cleanup: true
   on:
     branch: master
