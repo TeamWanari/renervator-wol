@@ -1,6 +1,6 @@
 package com.wanari.renervator.api
 
-import cats.effect.IO
+import cats.effect.{ContextShift, IO}
 import com.wanari.renervator.Database
 import com.wanari.renervator.Database.Host
 import com.wanari.renervator.api.WakerApi.{HostDTO, HostListDTO, IdDTO}
@@ -14,7 +14,11 @@ import org.http4s.dsl.io._
 import org.http4s.{Response, Status, Uri}
 import org.scalatest.{Matchers, WordSpec}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 class WakerApiSpec extends WordSpec with Matchers {
+
+  implicit val cs: ContextShift[IO] = IO.contextShift(global)
 
   val database: List[Host] => Database = (hosts: List[Host]) => {
     val database = new Database
@@ -25,7 +29,10 @@ class WakerApiSpec extends WordSpec with Matchers {
   "WakerAPI" when {
     "POST /wakeItUp" should {
       "return NotFound when id is not found in the database" in {
-        val wakerApi = new WakerApi(database(List.empty[Host]), new MockedNetworkingService(Right(())))
+        val wakerApi = new WakerApi(
+          database(List.empty[Host]),
+          new MockedNetworkingService(Right(()))
+        )
 
         val request = POST(IdDTO(1L).asJson, Uri.uri("/wakeItUp")).unsafeRunSync
         val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
@@ -36,18 +43,25 @@ class WakerApiSpec extends WordSpec with Matchers {
       }
 
       "return NotFound when NetworkingService#sendMagicPocket fails" in {
-        val wakerApi = new WakerApi(database(List.empty[Host]), new MockedNetworkingService(Left("I'm failed")))
+        val wakerApi = new WakerApi(
+          database(List(Host("localhost", "localhost", "", isOnline = false, 1L))),
+          new MockedNetworkingService(Left("I'm failed"))
+        )
 
         val request = POST(IdDTO(1L).asJson, Uri.uri("/wakeItUp")).unsafeRunSync
         val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
         response match {
-          case Some(response) => response.status shouldBe Status.NotFound
+          case Some(response) =>
+            response.status shouldBe Status.InternalServerError
           case _ => fail()
         }
       }
 
       "return OK when database is initialized" in {
-        val wakerApi = new WakerApi(database(List(Host("localhost", "localhost", "", isOnline = false, 1L))), new MockedNetworkingService(Right(())))
+        val wakerApi = new WakerApi(
+          database(List(Host("localhost", "localhost", "", isOnline = false, 1L))),
+          new MockedNetworkingService(Right(()))
+        )
 
         val request = POST(IdDTO(1L).asJson, Uri.uri("/wakeItUp")).unsafeRunSync
         val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
@@ -60,10 +74,13 @@ class WakerApiSpec extends WordSpec with Matchers {
       }
 
     }
-    "POST /wol" when {
+    "GET /wol" when {
       "when database base is empty" should {
         "return the data from the database" in {
-          val wakerApi = new WakerApi(database(List.empty[Host]), new MockedNetworkingService(Right(())))
+          val wakerApi = new WakerApi(
+            database(List.empty[Host]),
+            new MockedNetworkingService(Right(()))
+          )
 
           val request = GET(Uri.uri("/wol")).unsafeRunSync
           val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
@@ -81,7 +98,10 @@ class WakerApiSpec extends WordSpec with Matchers {
       "return the data from the database" in {
         val host = Host("localhost", "localhost", "", isOnline = false, 1L)
         val expectedHosts = HostDTO(1L, "localhost", false)
-        val wakerApi = new WakerApi(database(List(host)), new MockedNetworkingService(Right(())))
+        val wakerApi = new WakerApi(
+          database(List(host)),
+          new MockedNetworkingService(Right(()))
+        )
 
         val request = GET(Uri.uri("/wol")).unsafeRunSync
         val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
