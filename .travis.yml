@@ -1,0 +1,19 @@
+language: scala
+
+branches:
+  only:
+    - master
+
+services:
+  - docker
+
+script:
+  - sbt test
+  - docker build -t $DOCKER_IMAGE .
+
+deploy:
+  provider: script
+  script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin && docker push $DOCKER_IMAGE
+  skip_cleanup: true
+  on:
+    branch: master
