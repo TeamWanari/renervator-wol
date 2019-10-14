@@ -13,11 +13,10 @@ script:
 
 before_deploy:
   - docker tag renorvator-wol $DOCKER_IMAGE
-  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
 deploy:
   provider: script
-  script: docker push $DOCKER_IMAGE
+  script: bash docker_push.sh
   skip_cleanup: true
   on:
     branch: master
