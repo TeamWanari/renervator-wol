@@ -9,15 +9,18 @@ import com.wanari.renervator.Database.Host
 import com.wanari.renervator.api.WakerApi._
 import com.wanari.renervator.service.NetworkingService
 import io.circe.Json
+import io.circe.generic.auto._
 import org.http4s._
+import org.http4s.dsl.io._
+import tapir._
+import tapir.json.circe._
+import tapir.model.StatusCodes
+import io.circe.syntax._
 
+import org.http4s.circe.CirceEntityDecoder._
+import org.http4s.circe.CirceEntityEncoder._
 
 class WakerApi(database: Database, networkingService: NetworkingService)(implicit contextShift: ContextShift[IO]) {
-
-  import io.circe.generic.auto._
-  import tapir._
-  import tapir.json.circe._
-  import tapir.model.StatusCodes
 
   val wakeItUpApi: Endpoint[IdDTO, ErrorResponse, Json, Nothing] = endpoint
     .post
@@ -44,11 +47,17 @@ class WakerApi(database: Database, networkingService: NetworkingService)(implici
       result = Json.obj()
   } yield result).value
 
-  val hostListLogic: Unit=> IO[Either[Unit, HostListDTO]] = (_: Unit) => database.all.map[Either[Unit, HostListDTO]](e => Right(HostListDTO(e)))
+  val hostListLogic: Unit => IO[Either[Unit, HostListDTO]] = (_: Unit) => database.all.map[Either[Unit, HostListDTO]](e => Right(HostListDTO(e)))
 
   val route: HttpRoutes[IO] =
-    wakeItUpApi.serverLogic(wakeItUpApiLogic).toRoutes <+> hostListApi.serverLogic(hostListLogic).toRoutes
+    wakeItUpApi.serverLogic(wakeItUpApiLogic).toRoutes <+> hostListApi.serverLogic(hostListLogic).toRoutes <+> getHostsRoute
 
+  private lazy val getHostsRoute = HttpRoutes.of[IO]{
+      case GET -> Root / "hosts" / LongVar(id) =>
+        database.get(id).flatMap { hostOpt =>
+          hostOpt.fold(NotFound())(host => Ok(HostInfo(host.name, host.ip, host.mac)))
+        }
+  }
 }
 
 object WakerApi {
@@ -66,6 +75,7 @@ object WakerApi {
   final case class IdDTO(id: Long)
   final case class HostListDTO(hosts: List[HostDTO])
   final case class HostDTO(id: Long, name: String, isOnline: Boolean)
+  case class HostInfo(name: String, ip: String, mac: String)
 
   object HostListDTO {
     def apply(hosts: List[Host])(implicit dummy: DummyImplicit): HostListDTO = {

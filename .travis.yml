@@ -1,0 +1,22 @@
+language: scala
+
+branches:
+  only:
+    - master
+
+services:
+  - docker
+
+script:
+  - sbt test
+  - docker build -t renorvator-wol .
+
+before_deploy:
+  - docker tag renorvator-wol $DOCKER_IMAGE
+
+deploy:
+  provider: script
+  script: bash docker_push.sh
+  skip_cleanup: true
+  on:
+    branch: master

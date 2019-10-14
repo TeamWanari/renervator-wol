@@ -1,10 +1,10 @@
 package com.wanari.renervator.api
 
+import _root_.util.MockedNetworkingService
 import cats.effect.{ContextShift, IO}
 import com.wanari.renervator.Database
 import com.wanari.renervator.Database.Host
-import com.wanari.renervator.api.WakerApi.{HostDTO, HostListDTO, IdDTO}
-import com.wanari.renervator.service.NetworkingService
+import com.wanari.renervator.api.WakerApi.{HostDTO, HostInfo, HostListDTO, IdDTO}
 import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -74,14 +74,15 @@ class WakerApiSpec extends WordSpec with Matchers {
       }
 
     }
-    "GET /wol" when {
-      "when database base is empty" should {
-        "return the data from the database" in {
-          val wakerApi = new WakerApi(
-            database(List.empty[Host]),
-            new MockedNetworkingService(Right(()))
-          )
 
+    "when database base is empty" should {
+
+      val wakerApi = new WakerApi(
+        database(List.empty[Host]),
+        new MockedNetworkingService(Right(()))
+      )
+      "return no data from the database" when {
+        "GET /wol" in {
           val request = GET(Uri.uri("/wol")).unsafeRunSync
           val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
           response match {
@@ -92,33 +93,52 @@ class WakerApiSpec extends WordSpec with Matchers {
           }
         }
 
+        "GET /hosts/1" in {
+          val request = GET(Uri.uri("/hosts/1")).unsafeRunSync
+          val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
+          response match {
+            case Some(response) =>
+              response.status shouldBe Status.NotFound
+            case _ => fail()
+          }
+        }
       }
     }
-    "when database base is initialized" should {
-      "return the data from the database" in {
-        val host = Host("localhost", "localhost", "", isOnline = false, 1L)
-        val expectedHosts = HostDTO(1L, "localhost", false)
-        val wakerApi = new WakerApi(
-          database(List(host)),
-          new MockedNetworkingService(Right(()))
-        )
 
-        val request = GET(Uri.uri("/wol")).unsafeRunSync
-        val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
-        response match {
-          case Some(response) =>
-            response.status shouldBe Status.Ok
-            response.as[Json].unsafeRunSync() shouldBe HostListDTO(List(expectedHosts)).asJson
-          case _ => fail()
+    "when database base is initialized" should {
+      val host = Host("localhost", "localhost", "", isOnline = false, 1L)
+      val wakerApi = new WakerApi(
+        database(List(host)),
+        new MockedNetworkingService(Right(()))
+      )
+      "return data from the database" when {
+        "GET /wol" in {
+          val expectedHost = HostDTO(1L, "localhost", false)
+
+          val request = GET(Uri.uri("/wol")).unsafeRunSync
+          val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
+          response match {
+            case Some(response) =>
+              response.status shouldBe Status.Ok
+              response.as[Json].unsafeRunSync() shouldBe HostListDTO(List(expectedHost)).asJson
+            case _ => fail()
+          }
+        }
+
+
+        "GET /hosts/1" in {
+
+          val request = GET(Uri.uri("/hosts/1")).unsafeRunSync
+          val response: Option[Response[IO]] = wakerApi.route.run(request).value.unsafeRunSync()
+          response match {
+            case Some(response) =>
+              response.status shouldBe Status.Ok
+              response.as[Json].unsafeRunSync() shouldBe HostInfo(host.name, host.ip, host.mac).asJson
+            case _ => fail()
+          }
         }
       }
 
     }
   }
-}
-
-class MockedNetworkingService(result: Either[String, Unit]) extends NetworkingService {
-  override def ping(ip: String): IO[Boolean] = IO(true)
-
-  override def sendMagicPocket(ip: String, mac: String): IO[Either[String, Unit]] = IO(result)
 }
