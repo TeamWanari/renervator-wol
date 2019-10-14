@@ -4,7 +4,7 @@ import _root_.util.MockedNetworkingService
 import cats.effect.{ContextShift, IO}
 import com.wanari.renervator.Database
 import com.wanari.renervator.Database.Host
-import com.wanari.renervator.api.WakerApi.{HostDTO, HostInfo, HostListDTO, IdDTO}
+import com.wanari.renervator.api.WakerApi.{ErrorResponse, HostDTO, HostInfo, HostListDTO, IdDTO}
 import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -43,9 +43,10 @@ class WakerApiSpec extends WordSpec with Matchers {
       }
 
       "return NotFound when NetworkingService#sendMagicPocket fails" in {
+        val failedMessage = "I'm failed"
         val wakerApi = new WakerApi(
           database(List(Host("localhost", "localhost", "", isOnline = false, 1L))),
-          new MockedNetworkingService(Left("I'm failed"))
+          new MockedNetworkingService(Left(failedMessage))
         )
 
         val request = POST(IdDTO(1L).asJson, Uri.uri("/wakeItUp")).unsafeRunSync
@@ -53,6 +54,7 @@ class WakerApiSpec extends WordSpec with Matchers {
         response match {
           case Some(response) =>
             response.status shouldBe Status.InternalServerError
+            response.as[Json].unsafeRunSync() shouldBe ErrorResponse.Message(failedMessage).asJson
           case _ => fail()
         }
       }
