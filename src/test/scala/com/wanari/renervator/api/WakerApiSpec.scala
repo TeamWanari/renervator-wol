@@ -42,7 +42,7 @@ class WakerApiSpec extends WordSpec with Matchers {
         }
       }
 
-      "return NotFound when NetworkingService#sendMagicPocket fails" in {
+      "return Error message when NetworkingService#sendMagicPocket fails" in {
         val failedMessage = "I'm failed"
         val wakerApi = new WakerApi(
           database(List(Host("localhost", "localhost", "", isOnline = false, 1L))),
