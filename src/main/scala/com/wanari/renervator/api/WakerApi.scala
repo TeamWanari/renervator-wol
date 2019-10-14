@@ -11,14 +11,9 @@ import com.wanari.renervator.service.NetworkingService
 import io.circe.Json
 import io.circe.generic.auto._
 import org.http4s._
-import org.http4s.dsl.io._
 import tapir._
 import tapir.json.circe._
 import tapir.model.StatusCodes
-import io.circe.syntax._
-
-import org.http4s.circe.CirceEntityDecoder._
-import org.http4s.circe.CirceEntityEncoder._
 
 class WakerApi(database: Database, networkingService: NetworkingService)(implicit contextShift: ContextShift[IO]) {
 
@@ -39,25 +34,36 @@ class WakerApi(database: Database, networkingService: NetworkingService)(implici
     .in("wol")
     .out(jsonBody[HostListDTO])
 
+  val hostApi: Endpoint[Long, ErrorResponse.NotFound.type, HostInfo, Nothing] = endpoint
+    .get
+    .in("hosts" / path[Long]("hostId"))
+    .out(jsonBody[HostInfo])
+    .errorOut(statusCode(model.StatusCodes.NotFound))
+    .errorOut(jsonBody[ErrorResponse.NotFound.type])
+
   import tapir.server.http4s._
 
-  val wakeItUpApiLogic: IdDTO => IO[Either[ErrorResponse, Json]] = (idWrapper: IdDTO) => (for {
-    host <- EitherT.fromOptionF[IO, ErrorResponse, Host](database.get(idWrapper.id), ErrorResponse.NotFound)
-      _ <- EitherT(networkingService.sendMagicPocket(host)).leftMap[ErrorResponse](ErrorResponse.Message)
-      result = Json.obj()
-  } yield result).value
+  val wakeItUpApiLogic: IdDTO => IO[Either[ErrorResponse, Json]] = (idWrapper: IdDTO) =>
+    (for {
+      host <- EitherT.fromOptionF[IO, ErrorResponse, Host](database.get(idWrapper.id), ErrorResponse.NotFound)
+        _ <- EitherT(networkingService.sendMagicPocket(host)).leftMap[ErrorResponse](ErrorResponse.Message)
+        result = Json.obj()
+    } yield result).value
 
-  val hostListLogic: Unit => IO[Either[Unit, HostListDTO]] = (_: Unit) => database.all.map[Either[Unit, HostListDTO]](e => Right(HostListDTO(e)))
+  val hostListLogic: Unit => IO[Either[Unit, HostListDTO]] = (_: Unit) =>
+    database.all.map[Either[Unit, HostListDTO]](e => Right(HostListDTO(e)))
+
+  val hostLogic: Long => IO[Either[ErrorResponse.NotFound.type, HostInfo]] = (id: Long) =>
+    (for {
+      host <- EitherT.fromOptionF(database.get(id), ErrorResponse.NotFound)
+        hostInfo = HostInfo(host.name, host.ip, host.mac)
+    } yield hostInfo).value
 
   val route: HttpRoutes[IO] =
-    wakeItUpApi.serverLogic(wakeItUpApiLogic).toRoutes <+> hostListApi.serverLogic(hostListLogic).toRoutes <+> getHostsRoute
+    wakeItUpApi.serverLogic(wakeItUpApiLogic).toRoutes <+>
+      hostListApi.serverLogic(hostListLogic).toRoutes <+>
+      hostApi.serverLogic(hostLogic).toRoutes
 
-  private lazy val getHostsRoute = HttpRoutes.of[IO]{
-      case GET -> Root / "hosts" / LongVar(id) =>
-        database.get(id).flatMap { hostOpt =>
-          hostOpt.fold(NotFound())(host => Ok(HostInfo(host.name, host.ip, host.mac)))
-        }
-  }
 }
 
 object WakerApi {
