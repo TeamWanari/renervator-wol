@@ -35,8 +35,7 @@ libraryDependencies ++= {
     "io.circe" %% "circe-generic" % "0.12.0",
     //test
     "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
-    "org.mockito" % "mockito-core" % "2.7.22" % Test,
-    "org.http4s" %% "http4s-testing" % http4sVersion % Test,
+    "org.mockito" % "mockito-core" % "2.7.22" % Test
   ) ++ tapir
 }
 
