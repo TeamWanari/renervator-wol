@@ -4,9 +4,10 @@ import cats.data.OptionT
 import cats.effect._
 import com.wanari.renervator.Database
 import com.wanari.renervator.Database.Host
-import com.wanari.renervator.api.WakerApi.{HostListDTO, IdDTO}
+import com.wanari.renervator.api.WakerApi.{HostInfo, HostListDTO, IdDTO}
 import com.wanari.renervator.service.NetworkingService
 import io.circe.Json
+import io.circe.syntax._
 import org.http4s._
 import org.http4s.dsl.io._
 
@@ -27,6 +28,11 @@ class WakerApi(database: Database, networkingService: NetworkingService) {
 
     case GET -> Root / "wol" =>
       database.all.flatMap(l => Ok(HostListDTO(l)))
+
+    case GET -> Root / "hosts" / LongVar(id) =>
+      database.get(id).flatMap { hostOpt =>
+        hostOpt.fold(NotFound())(host => Ok(HostInfo(host.name, host.ip, host.mac).asJson))
+      }
   }
 }
 
@@ -35,6 +41,7 @@ object WakerApi {
   case class IdDTO(id: Long)
   case class HostListDTO(hosts: List[HostDTO])
   case class HostDTO(id: Long, name: String, isOnline: Boolean)
+  case class HostInfo(name: String, ip: String, mac: String)
 
   object HostListDTO {
     def apply(hosts: List[Host])(implicit dummy: DummyImplicit): HostListDTO = {
