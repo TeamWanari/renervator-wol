@@ -6,7 +6,6 @@ import com.wanari.renervator.api.{FrontendApi, HealthCheckApi, WakerApi}
 import com.wanari.renervator.service.{NetworkingService, PingerService}
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
-import org.http4s.server.staticcontent._
 import org.http4s.syntax.kleisli._
 
 import scala.concurrent.ExecutionContext.Implicits.global

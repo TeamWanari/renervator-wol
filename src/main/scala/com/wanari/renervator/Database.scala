@@ -13,7 +13,7 @@ class Database {
 
   def get(id: Long): IO[Option[Host]] = {
     IO{
-      Try(map.get(id)).toOption
+      Try(Option(map.get(id))).toOption.flatten
     }
   }
 
