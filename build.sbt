@@ -6,7 +6,7 @@ scalaVersion := "2.12.8"
 
 
 // Only necessary for SNAPSHOT releases
-resolvers ++= Resolver.sonatypeOssRepos("snapshots")
+resolvers += Resolver.sonatypeRepo("snapshots")
 
 scalacOptions ++= Seq("-Ypartial-unification")
 
