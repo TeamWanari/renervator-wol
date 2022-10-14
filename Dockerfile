@@ -1,4 +1,4 @@
-FROM hseeberger/scala-sbt:8u181_2.12.8_1.2.8 as build
+FROM hseeberger/scala-sbt:8u312_1.6.2_2.12.15 as build
 WORKDIR /build
 COPY build.sbt /build/build.sbt
 COPY project/plugins.sbt /build/project/plugins.sbt

@@ -41,8 +41,8 @@ libraryDependencies ++= {
 
 enablePlugins(BuildInfoPlugin)
 
-mainClass in assembly := Some("com.wanari.renervator.Main")
-assemblyJarName in assembly := "wol.jar"
+assembly / mainClass := Some("com.wanari.renervator.Main")
+assembly / assemblyJarName := "wol.jar"
 
 buildInfoKeys := Seq[BuildInfoKey](
   name,
@@ -55,4 +55,3 @@ buildInfoKeys := Seq[BuildInfoKey](
 )
 buildInfoOptions := Seq(BuildInfoOption.BuildTime)
 buildInfoPackage := "com.wanari.renervator"
-
